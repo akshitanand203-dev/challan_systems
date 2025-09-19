@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digital Challan – With Stamp</title>
+  <style>
+    :root { --red:#c5162f; --border:#c5162f; --ink:#111; --muted:#6b7280; --bg:#f9fafb; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+    .wrap{max-width:1280px;margin:auto;padding:20px}
+    .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+    .logo{border:2px solid var(--border);color:var(--red);height:42px;width:42px;display:flex;align-items:center;justify-content:center;font-weight:900;border-radius:8px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;transition:.2s}
+    .btn:hover{background:#f3f4f6}
+    .btn.primary{background:var(--red);color:#fff;border-color:var(--red)}
+    .grid{display:grid;grid-template-columns:1fr;gap:20px}
+    @media(min-width:1024px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+    h2{font-size:15px;margin-bottom:12px;color:var(--muted)}
+    label{font-size:13px;display:block;margin-bottom:8px;color:var(--muted)}
+    input{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    th,td{padding:8px;border-top:1px solid #e5e7eb;text-align:left}
+    th{background:#f9fafb;font-weight:600}
+    td input{width:100%;font-size:13px}
+    .right{text-align:right}
+
+    .sheet-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:8px;background:#f4f4f5;padding:10px}
+    .sheet{width:794px;height:1123px;background:#fff;margin:auto;position:relative}
+    .sheet .inner{border:3px solid var(--border);height:100%;padding:20px;display:flex;flex-direction:column;position:relative}
+    .brand{display:flex;justify-content:space-between;gap:12px}
+    .brand h1{margin:0;color:var(--red);font-size:26px;line-height:1.2}
+    .brand small{display:block;color:var(--red)}
+    .meta{display:grid;grid-template-columns:1fr 1fr;margin-top:8px;font-size:13px}
+    .ms{margin-top:6px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:13px}
+    .t{border:1px solid var(--border);margin-top:12px;flex:1;display:flex;flex-direction:column}
+    .t-head{display:grid;grid-template-columns:1fr 5fr 2fr 2fr 2fr;background:#fff5f5;border-bottom:1px solid var(--border);font-weight:600}
+    .t-head>div,.row>div{padding:6px 8px;border-right:1px solid #f2c6cc}
+    .t-head>div:last-child,.row>div:last-child{border-right:none}
+    .rows{flex:1;overflow:hidden}
+    .row{display:grid;grid-template-columns:1fr 5fr 2fr 2fr 2fr;border-bottom:1px solid #f6d0d6;font-size:13px;min-height:28px}
+    .row .right{text-align:right}
+    .tot{display:grid;grid-template-columns:6fr 2fr 2fr 2fr;background:#fff5f5}
+    .tot>div{padding:6px 8px;border-top:1px solid var(--border);font-weight:600}
+    .note{margin-top:12px;color:var(--red);font-size:12px}
+    .sig{display:grid;grid-template-columns:1fr 1fr;margin-top:20px;font-size:13px;position:relative}
+    .sig .line{border-top:1px solid var(--border);display:inline-block;padding-top:6px;width:75%}
+    .stamp{position:absolute; right:40px; bottom:10px; width:140px; opacity:0.95;}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="logo">MD</div>
+        <div>
+          <div style="font-weight:600">Digital Challan</div>
+          <div style="font-size:12px;color:var(--muted)">Preview • Download • Share</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" id="btnPreview">Preview</button>
+        <button class="btn" id="btnDownload">Download</button>
+        <button class="btn" id="btnShare">Share</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Fill Challan Details</h2>
+        <label>Challan No.<input type="text" id="fNo" value="2931" /></label>
+        <label>Date<input type="date" id="fDate" /></label>
+        <label>M/s (Client)<input type="text" id="fMs" placeholder="Buyer name / company" /></label>
+
+        <h2>Line Items</h2>
+        <button class="btn" id="btnAdd">+ Add Row</button>
+        <table>
+          <thead><tr><th>S.No</th><th>Particulars</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:13px">
+          <span>Total Qty: <b id="totalQty">0</b></span>
+          <span>Total Amount: <b id="totalAmt">0</b></span>
+        </div>
+
+        <h2>Footer & Branding</h2>
+        <label>Footer Note<input type="text" id="fNote" value="Please receive the following items in good condition." /></label>
+        <label>Brand Name<input type="text" id="bName" value="Maahi Designs" /></label>
+        <label>Tagline<input type="text" id="bTag" value="Mfrs. & Exporter of READYMADE GARMENTS" /></label>
+        <label>Address<input type="text" id="bAddr" value="L-15, Second Floor, Cahayaka Palace, Part 2, New Delhi-59" /></label>
+        <label>Mobile 1<input type="text" id="bPh1" value="9873173583" /></label>
+        <label>Mobile 2<input type="text" id="bPh2" value="9873173584" /></label>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--muted);font-size:13px">
+          <div>Print‑ready Preview (A4)</div>
+          <button class="btn" id="btnToggle">Hide</button>
+        </div>
+        <div class="sheet-wrap" id="sheetWrap">
+          <div class="sheet" id="sheet">
+            <div class="inner">
+              <div class="brand">
+                <div>
+                  <h1 id="pBrand">Maahi Designs</h1>
+                  <small id="pTag">Mfrs. & Exporter of READYMADE GARMENTS</small>
+                  <small id="pAddr">L-15, Second Floor, Cahayaka Palace, Part 2, New Delhi-59</small>
+                </div>
+                <div style="text-align:right;color:var(--red);font-size:12px">
+                  <div>Mobile: <span id="pPh1">9873173583</span></div>
+                  <div id="pPh2">9873173584</div>
+                </div>
+              </div>
+
+              <div class="meta"><div><b>No.</b> <span id="pNo">2931</span></div><div style="text-align:right"><b>Dated</b> <span id="pDate"></span></div></div>
+              <div class="ms"><b>M/s</b> <span id="pMs"></span></div>
+
+              <div class="t">
+                <div class="t-head"><div>S.No.</div><div>PARTICULARS</div><div class='right'>QTY.</div><div class='right'>RATE</div><div class='right'>AMOUNT</div></div>
+                <div class="rows" id="pRows"></div>
+                <div class="tot"><div>TOTAL</div><div class="right" id="pTotalQty">0</div><div></div><div class="right" id="pTotalAmt">0</div></div>
+              </div>
+
+              <div class="note" id="pNote">Please receive the following items in good condition.</div>
+              <div class="sig">
+                <div><span class="line">Receiver's Signature</span></div>
+                <div style="text-align:right; position:relative">
+                  <img src="Sept 19 Screenshot from Remove.bg.png" class="stamp" alt="Stamp" />
+                  <span class="line">Authorised Signature</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (q) => document.querySelector(q);
+    const tbody = $('#tbody');
+    const totalQtyEl = $('#totalQty');
+    const totalAmtEl = $('#totalAmt');
+
+    const state = { items: [] };
+
+    function renderRows(){
+      tbody.innerHTML = '';
+      state.items.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx+1}</td>
+          <td><input value="${r.particulars}"/></td>
+          <td><input type='number' step='1' min='0' value='${r.qty}' style='width:60px;text-align:right'/></td>
+          <td><input type='number' step='0.01' min='0' value='${r.rate}' style='width:70px;text-align:right'/></td>
+          <td class='right amt'>${(r.qty * r.rate).toFixed(2)}</td>
+          <td><button class='btn'>🗑</button></td>`;
+
+        const iPart = tr.children[1].querySelector('input');
+        const iQty  = tr.children[2].querySelector('input');
+        const iRate = tr.children[3].querySelector('input');
+        const amtCell = tr.querySelector('.amt');
+        const delBtn = tr.children[5].querySelector('button');
+
+        iPart.oninput = e => { r.particulars = e.target.value; syncPreview(); };
+        iQty.oninput  = e => { r.qty = +e.target.value || 0; amtCell.textContent = (r.qty * r.rate).toFixed(2); updateTotals(); syncPreview(); };
+        iRate.oninput = e => { r.rate = +e.target.value || 0; amtCell.textContent = (r.qty * r.rate).toFixed(2); updateTotals(); syncPreview(); };
+        delBtn.onclick = () => { state.items.splice(idx,1); renderRows(); syncPreview(); };
+
+        tbody.appendChild(tr);
+      });
+      updateTotals();
+    }
+
+    function updateTotals(){
+      const qty = state.items.reduce((a,b)=>a+(+b.qty||0),0);
+      const amt = state.items.reduce((a,b)=>a+((+b.qty||0)*(+b.rate||0)),0);
+      totalQtyEl.textContent = qty;
+      totalAmtEl.textContent = amt.toFixed(2);
+      $('#pTotalQty').textContent = qty;
+      $('#pTotalAmt').textContent = amt.toFixed(2);
+    }
+
+    function syncPreview(){
+      $('#pBrand').textContent = $('#bName').value;
+      $('#pTag').textContent = $('#bTag').value;
+      $('#pAddr').textContent = $('#bAddr').value;
+      $('#pPh1').textContent = $('#bPh1').value;
+      $('#pPh2').textContent = $('#bPh2').value;
+      $('#pNo').textContent = $('#fNo').value;
+      $('#pDate').textContent = new Date($('#fDate').value||Date.now()).toLocaleDateString();
+      $('#pMs').textContent = $('#fMs').value;
+      $('#pNote').textContent = $('#fNote').value;
+      const rows = $('#pRows');
+      rows.innerHTML = '';
+      state.items.forEach((r,i) => {
+        const amt = (r.qty*r.rate).toFixed(2);
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.innerHTML = `<div>${i+1}</div><div>${r.particulars}</div><div class='right'>${r.qty}</div><div class='right'>${r.rate}</div><div class='right'>${amt}</div>`;
+        rows.appendChild(div);
+      });
+      updateTotals();
+    }
+
+    $('#btnAdd').onclick = () => { state.items.push({ particulars:'', qty:0, rate:0 }); renderRows(); syncPreview(); };
+
+    $('#btnToggle').onclick = e => {
+      const wrap = $('#sheetWrap');
+      wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
+      e.target.textContent = wrap.style.display==='none' ? 'Show' : 'Hide';
+    };
+
+    async function generatePDF(){
+      const sheet = $('#sheet');
+      const canvas = await html2canvas(sheet,{scale:2});
+      const img = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit:'pt', format:'a4' });
+      pdf.addImage(img,'PNG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());
+      return pdf;
+    }
+
+    $('#btnDownload').onclick = async () => {
+      const pdf = await generatePDF();
+      pdf.save(`Challan_${($('#bName').value||'Brand')}_${$('#fNo').value||'NA'}.pdf`);
+    };
+
+    $('#btnShare').onclick = async () => {
+      try{
+        const pdf = await generatePDF();
+        const blob = pdf.output('blob');
+        const file = new File([blob], 'Challan.pdf', { type:'application/pdf' });
+        if(navigator.canShare && navigator.canShare({ files:[file] })){
+          await navigator.share({ files:[file], title:'Challan', text:'Digital Challan' });
+        }else{
+          const url = URL.createObjectURL(blob);
+          const a=document.createElement('a');
+          a.href=url; a.download='Challan.pdf'; a.click();
+          URL.revokeObjectURL(url);
+        }
+      }catch(err){alert('Unable to share');}
+    };
+
+    $('#btnPreview').onclick = () => { syncPreview(); };
+
+    $('#fDate').valueAsDate = new Date();
+    state.items.push({ particulars:'Sample Item', qty:1, rate:100 });
+    renderRows(); syncPreview();
+  </script>
+</body>
+</html>
