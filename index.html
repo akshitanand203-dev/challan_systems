@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digital Challan – No Amount Column</title>
+  <title>Digital Challan – Save & History (No Amount)</title>
   <style>
     :root { --red:#c5162f; --border:#c5162f; --ink:#111; --muted:#6b7280; --bg:#f9fafb; }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -62,6 +62,7 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="btnSave">Save</button>
         <button class="btn primary" id="btnPreview">Preview</button>
         <button class="btn" id="btnDownload">Download</button>
         <button class="btn" id="btnShare">Share</button>
@@ -136,6 +137,30 @@
         </div>
       </div>
     </div>
+
+    <!-- Saved Challans List -->
+    <div class="card" style="grid-column:1 / -1; margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0">Saved Challans</h2>
+        <div>
+          <button class="btn" id="btnClearAll">Clear All</button>
+        </div>
+      </div>
+      <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:8px">
+        <table id="savedTable">
+          <thead>
+            <tr>
+              <th style="width:120px">Date</th>
+              <th style="width:90px">No.</th>
+              <th>M/s</th>
+              <th style="width:100px" class="right">Total Qty</th>
+              <th style="width:240px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="savedBody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:12px">No challans saved yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -196,14 +221,21 @@
       updateTotals();
     }
 
+    // Add row
     $('#btnAdd').onclick = () => { state.items.push({ particulars:'', qty:0, rate:0 }); renderRows(); syncPreview(); };
 
+    // Live-sync when typing in brand/address/etc.
+    ['#bName','#bTag','#bAddr','#bPh1','#bPh2','#fNo','#fDate','#fMs','#fNote']
+      .forEach(sel => { const el = $(sel); el && el.addEventListener('input', syncPreview); });
+
+    // Toggle preview
     $('#btnToggle').onclick = e => {
       const wrap = $('#sheetWrap');
       wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
       e.target.textContent = wrap.style.display==='none' ? 'Show' : 'Hide';
     };
 
+    // PDF helpers
     async function generatePDF(){
       const sheet = $('#sheet');
       const canvas = await html2canvas(sheet,{scale:2});
@@ -228,8 +260,7 @@
           await navigator.share({ files:[file], title:'Challan', text:'Digital Challan' });
         }else{
           const url = URL.createObjectURL(blob);
-          const a=document.createElement('a');
-          a.href=url; a.download='Challan.pdf'; a.click();
+          const a=document.createElement('a'); a.href=url; a.download='Challan.pdf'; a.click();
           URL.revokeObjectURL(url);
         }
       }catch(err){alert('Unable to share');}
@@ -237,9 +268,91 @@
 
     $('#btnPreview').onclick = () => { syncPreview(); };
 
+    // --- Save / History using localStorage ---
+    const KEY = 'challans_v1';
+    const savedBody = document.getElementById('savedBody');
+
+    const readAll = () => { try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] } };
+    const writeAll = (list) => localStorage.setItem(KEY, JSON.stringify(list));
+
+    function getCurrentChallan(){
+      return {
+        id: Date.now(),
+        brand: $('#bName').value,
+        tag: $('#bTag').value,
+        addr: $('#bAddr').value,
+        ph1: $('#bPh1').value,
+        ph2: $('#bPh2').value,
+        no: $('#fNo').value,
+        date: $('#fDate').value || new Date().toISOString().slice(0,10),
+        ms: $('#fMs').value,
+        note: $('#fNote').value,
+        items: JSON.parse(JSON.stringify(state.items)),
+      };
+    }
+
+    function loadIntoForm(data){
+      $('#bName').value = data.brand||''; $('#bTag').value = data.tag||''; $('#bAddr').value = data.addr||'';
+      $('#bPh1').value = data.ph1||''; $('#bPh2').value = data.ph2||'';
+      $('#fNo').value = data.no||''; $('#fDate').value = data.date||''; $('#fMs').value = data.ms||''; $('#fNote').value = data.note||'';
+      state.items = (data.items && data.items.length) ? data.items : [{ particulars:'', qty:0, rate:0 }];
+      renderRows(); syncPreview();
+    }
+
+    function renderSaved(){
+      const list = readAll();
+      if(!list.length){ savedBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:12px">No challans saved yet.</td></tr>`; return; }
+      savedBody.innerHTML = '';
+      list.sort((a,b)=>b.id-a.id).forEach(c => {
+        const tr = document.createElement('tr');
+        const totalQty = (c.items||[]).reduce((t,i)=>t+(+i.qty||0),0);
+        const prettyDate = new Date(c.date).toLocaleDateString();
+        tr.innerHTML = `
+          <td>${prettyDate}</td>
+          <td>${c.no||'—'}</td>
+          <td>${c.ms||''}</td>
+          <td class='right'>${totalQty}</td>
+          <td>
+            <button class='btn' data-act='load' data-id='${c.id}'>Load</button>
+            <button class='btn' data-act='download' data-id='${c.id}'>Download</button>
+            <button class='btn' data-act='delete' data-id='${c.id}'>Delete</button>
+          </td>`;
+        savedBody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('btnSave').onclick = () => {
+      const list = readAll();
+      const data = getCurrentChallan();
+      list.push(data); writeAll(list); renderSaved();
+      alert('Challan saved');
+    };
+
+    document.getElementById('btnClearAll').onclick = () => {
+      if(confirm('Delete ALL saved challans?')){ writeAll([]); renderSaved(); }
+    };
+
+    savedBody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      const act = btn.dataset.act; const id = +btn.dataset.id; const list = readAll();
+      const item = list.find(x=>x.id===id); if(!item) return;
+      if(act==='load'){ loadIntoForm(item); document.getElementById('sheetWrap').scrollIntoView({behavior:'smooth'}); }
+      if(act==='delete'){ if(confirm('Delete this challan?')){ writeAll(list.filter(x=>x.id!==id)); renderSaved(); } }
+      if(act==='download'){
+        const current = getCurrentChallan();
+        loadIntoForm(item);
+        const pdf = await generatePDF();
+        const fname = `Challan_${(item.brand||'Brand').replace(/\s+/g,'-')}_${item.no||'NA'}.pdf`;
+        pdf.save(fname);
+        loadIntoForm(current);
+      }
+    });
+
+    // Init
     $('#fDate').valueAsDate = new Date();
     state.items.push({ particulars:'Sample Item', qty:1, rate:100 });
     renderRows(); syncPreview();
+    renderSaved();
   </script>
 </body>
 </html>
