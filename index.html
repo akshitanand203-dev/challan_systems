@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digital Challan – With Stamp</title>
+  <title>Digital Challan – No Amount Column</title>
   <style>
     :root { --red:#c5162f; --border:#c5162f; --ink:#111; --muted:#6b7280; --bg:#f9fafb; }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -35,13 +35,13 @@
     .meta{display:grid;grid-template-columns:1fr 1fr;margin-top:8px;font-size:13px}
     .ms{margin-top:6px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:13px}
     .t{border:1px solid var(--border);margin-top:12px;flex:1;display:flex;flex-direction:column}
-    .t-head{display:grid;grid-template-columns:1fr 5fr 2fr 2fr 2fr;background:#fff5f5;border-bottom:1px solid var(--border);font-weight:600}
+    .t-head{display:grid;grid-template-columns:1fr 6fr 2fr 2fr;background:#fff5f5;border-bottom:1px solid var(--border);font-weight:600}
     .t-head>div,.row>div{padding:6px 8px;border-right:1px solid #f2c6cc}
     .t-head>div:last-child,.row>div:last-child{border-right:none}
     .rows{flex:1;overflow:hidden}
-    .row{display:grid;grid-template-columns:1fr 5fr 2fr 2fr 2fr;border-bottom:1px solid #f6d0d6;font-size:13px;min-height:28px}
+    .row{display:grid;grid-template-columns:1fr 6fr 2fr 2fr;border-bottom:1px solid #f6d0d6;font-size:13px;min-height:28px}
     .row .right{text-align:right}
-    .tot{display:grid;grid-template-columns:6fr 2fr 2fr 2fr;background:#fff5f5}
+    .tot{display:grid;grid-template-columns:8fr 2fr;background:#fff5f5}
     .tot>div{padding:6px 8px;border-top:1px solid var(--border);font-weight:600}
     .note{margin-top:12px;color:var(--red);font-size:12px}
     .sig{display:grid;grid-template-columns:1fr 1fr;margin-top:20px;font-size:13px;position:relative}
@@ -78,12 +78,11 @@
         <h2>Line Items</h2>
         <button class="btn" id="btnAdd">+ Add Row</button>
         <table>
-          <thead><tr><th>S.No</th><th>Particulars</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead>
+          <thead><tr><th>S.No</th><th>Particulars</th><th>Qty</th><th>Rate</th><th></th></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:13px">
           <span>Total Qty: <b id="totalQty">0</b></span>
-          <span>Total Amount: <b id="totalAmt">0</b></span>
         </div>
 
         <h2>Footer & Branding</h2>
@@ -119,9 +118,9 @@
               <div class="ms"><b>M/s</b> <span id="pMs"></span></div>
 
               <div class="t">
-                <div class="t-head"><div>S.No.</div><div>PARTICULARS</div><div class='right'>QTY.</div><div class='right'>RATE</div><div class='right'>AMOUNT</div></div>
+                <div class="t-head"><div>S.No.</div><div>PARTICULARS</div><div class='right'>QTY.</div><div class='right'>RATE</div></div>
                 <div class="rows" id="pRows"></div>
-                <div class="tot"><div>TOTAL</div><div class="right" id="pTotalQty">0</div><div></div><div class="right" id="pTotalAmt">0</div></div>
+                <div class="tot"><div>TOTAL</div><div class="right" id="pTotalQty">0</div></div>
               </div>
 
               <div class="note" id="pNote">Please receive the following items in good condition.</div>
@@ -143,8 +142,6 @@
     const $ = (q) => document.querySelector(q);
     const tbody = $('#tbody');
     const totalQtyEl = $('#totalQty');
-    const totalAmtEl = $('#totalAmt');
-
     const state = { items: [] };
 
     function renderRows(){
@@ -155,18 +152,16 @@
           <td><input value="${r.particulars}"/></td>
           <td><input type='number' step='1' min='0' value='${r.qty}' style='width:60px;text-align:right'/></td>
           <td><input type='number' step='0.01' min='0' value='${r.rate}' style='width:70px;text-align:right'/></td>
-          <td class='right amt'>${(r.qty * r.rate).toFixed(2)}</td>
           <td><button class='btn'>🗑</button></td>`;
 
         const iPart = tr.children[1].querySelector('input');
         const iQty  = tr.children[2].querySelector('input');
         const iRate = tr.children[3].querySelector('input');
-        const amtCell = tr.querySelector('.amt');
-        const delBtn = tr.children[5].querySelector('button');
+        const delBtn = tr.children[4].querySelector('button');
 
         iPart.oninput = e => { r.particulars = e.target.value; syncPreview(); };
-        iQty.oninput  = e => { r.qty = +e.target.value || 0; amtCell.textContent = (r.qty * r.rate).toFixed(2); updateTotals(); syncPreview(); };
-        iRate.oninput = e => { r.rate = +e.target.value || 0; amtCell.textContent = (r.qty * r.rate).toFixed(2); updateTotals(); syncPreview(); };
+        iQty.oninput  = e => { r.qty = +e.target.value || 0; updateTotals(); syncPreview(); };
+        iRate.oninput = e => { r.rate = +e.target.value || 0; syncPreview(); };
         delBtn.onclick = () => { state.items.splice(idx,1); renderRows(); syncPreview(); };
 
         tbody.appendChild(tr);
@@ -176,11 +171,8 @@
 
     function updateTotals(){
       const qty = state.items.reduce((a,b)=>a+(+b.qty||0),0);
-      const amt = state.items.reduce((a,b)=>a+((+b.qty||0)*(+b.rate||0)),0);
       totalQtyEl.textContent = qty;
-      totalAmtEl.textContent = amt.toFixed(2);
       $('#pTotalQty').textContent = qty;
-      $('#pTotalAmt').textContent = amt.toFixed(2);
     }
 
     function syncPreview(){
@@ -196,10 +188,9 @@
       const rows = $('#pRows');
       rows.innerHTML = '';
       state.items.forEach((r,i) => {
-        const amt = (r.qty*r.rate).toFixed(2);
         const div = document.createElement('div');
         div.className = 'row';
-        div.innerHTML = `<div>${i+1}</div><div>${r.particulars}</div><div class='right'>${r.qty}</div><div class='right'>${r.rate}</div><div class='right'>${amt}</div>`;
+        div.innerHTML = `<div>${i+1}</div><div>${r.particulars}</div><div class='right'>${r.qty}</div><div class='right'>${r.rate}</div>`;
         rows.appendChild(div);
       });
       updateTotals();
